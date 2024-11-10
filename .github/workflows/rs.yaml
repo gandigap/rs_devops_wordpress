@@ -1,0 +1,75 @@
+name: SSH Connection Example
+
+on:
+  push:
+    branches:
+      - task-5
+
+jobs:
+  deploy-wordpress:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # Очистка кеша SSH-конфигурации перед запуском
+    - name: Clear SSH config cache
+      run: |
+        echo "Clearing SSH config cache..."
+        rm -rf ~/.ssh/*
+
+    # Пример использования кеширования для зависимостей
+    - name: Cache SSH config
+      uses: actions/cache@v2
+      with:
+        path: ~/.ssh
+        key: ${{ runner.os }}-ssh-config-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-ssh-config-
+
+    - name: Setup SOCKS5 Proxy connection
+      env:
+        K3S_SSH_PK: ${{ secrets.K3S_SSH_PK }}
+        SSH_CONFIG: ${{ secrets.SSH_CONFIG }}
+        K3S_IP: ${{ secrets.K3S_IP }}
+        K3S_USER: ${{ secrets.K3S_USER }}
+      run: |
+        # Создаем директорию для SSH конфигурации
+        mkdir -p ~/.ssh
+        
+        # Запускаем SSH-агент
+        eval "$(ssh-agent -s)"
+        
+        # Устанавливаем правильные права доступа для приватного ключа
+        echo "$K3S_SSH_PK" | tr -d '\r' > ~/.ssh/bastion_key
+        chmod 600 ~/.ssh/bastion_key
+
+        # Добавляем ключ в агент
+        ssh-add ~/.ssh/bastion_key
+        
+        # Создаем SSH конфигурацию из секрета
+        echo "$SSH_CONFIG" > ~/.ssh/config
+        chmod 600 ~/.ssh/config
+
+        # Выводим переменные для проверки
+        echo "lalal"
+        echo "K3S_IP: $K3S_IP"
+        echo "K3S_USER: $K3S_USER"
+
+        # Настройка SOCKS5 прокси через SSH
+        echo "Starting SSH SOCKS5 Proxy..."
+        ssh -v -D 1080 -N -q -o StrictHostKeyChecking=no $K3S_USER@$K3S_IP &
+
+        # Проверяем, что прокси работает
+        sleep 5
+        curl --proxy socks5h://localhost:1080 http://example.com
+
+        # Завершаем прокси-подключение
+        kill %1
+
+    # - name: Get cloud-init logs
+    #   run: |
+    #     # Подключаемся к серверу и получаем лог cloud-init с правами sudo
+    #     echo "Fetching cloud-init log..."
+    #     ssh -o StrictHostKeyChecking=no -i ~/.ssh/bastion_key ec2-user@13.51.106.73 "sudo cat /var/log/cloud-init-output.log"
