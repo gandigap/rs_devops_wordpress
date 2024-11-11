@@ -52,8 +52,11 @@ jobs:
           echo "$SSH_CONFIG" > ~/.ssh/config
           chmod 600 ~/.ssh/config
 
+          # Добавляем сервер в known_hosts для предотвращения ошибки
+          ssh-keyscan -H $K3S_IP >> ~/.ssh/known_hosts
+
           # Настройка туннеля для доступа к k3s API server
-          ssh -L 6443:127.0.0.1:6443 -N -f $K3S_USER@$K3S_IP
+          ssh -L 6443:127.0.0.1:6443 -N -f $K3S_USER@$K3S_IP -o StrictHostKeyChecking=no
 
       # Добавление репозитория Bitnami и обновление репозиториев Helm
       - name: Add Bitnami Helm repository
@@ -85,6 +88,6 @@ jobs:
           kubectl cluster-info
           kubectl get nodes
 
-          # Деплой WordPress с помощью Helm 1
+          # Деплой WordPress с помощью Helm
           kubectl get namespace wordpress || kubectl create namespace wordpress        
           helm upgrade --install wordpress -n wordpress helm-charts/wordpress
