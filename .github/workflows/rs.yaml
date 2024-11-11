@@ -58,21 +58,25 @@ jobs:
           # Настройка туннеля для доступа к k3s API server
           ssh -L 6443:127.0.0.1:6443 -N -f $K3S_USER@$K3S_IP -o StrictHostKeyChecking=no
 
-      # Добавление репозитория Bitnami и обновление репозиториев Helm
+      # Установка Helm и проверка доступных версий
+      - name: Install Helm
+        run: |
+          curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
+
       - name: Add Bitnami Helm repository
         run: |
           helm repo add bitnami https://charts.bitnami.com/bitnami
           helm repo update
 
-      # Проверка доступных версий MariaDB в репозитории Bitnami
+      # Проверка доступных версий MariaDB в репозитории Bitnami (опционально)
       - name: Check available MariaDB versions
         run: |
           helm search repo bitnami/mariadb --versions
 
-      # Обновление зависимостей Helm
+      # Обновление зависимостей Helm (если нужны зависимости)
       - name: Update Helm dependencies
         run: |
-          helm dependency update helm-charts/wordpress
+          helm dependency update ./helm-charts/wordpress
 
       - name: Deploy WordPress
         env:
@@ -88,6 +92,6 @@ jobs:
           kubectl cluster-info
           kubectl get nodes
 
-          # Деплой WordPress с помощью Helm
+          # Деплой WordPress с помощью кастомного Helm chart
           kubectl get namespace wordpress || kubectl create namespace wordpress        
-          helm upgrade --install wordpress -n wordpress helm-charts/wordpress
+          helm upgrade --install wordpress ./helm-charts/wordpress -n wordpress -f ./helm-charts/wordpress/values.yaml
