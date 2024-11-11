@@ -10,66 +10,81 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    # Очистка кеша SSH-конфигурации перед запуском
-    - name: Clear SSH config cache
-      run: |
-        echo "Clearing SSH config cache..."
-        rm -rf ~/.ssh/*
+      # Очистка кеша SSH-конфигурации перед запуском
+      - name: Clear SSH config cache
+        run: |
+          echo "Clearing SSH config cache..."
+          rm -rf ~/.ssh/*
 
-    # Пример использования кеширования для зависимостей
-    - name: Cache SSH config
-      uses: actions/cache@v2
-      with:
-        path: ~/.ssh
-        key: ${{ runner.os }}-ssh-config-${{ github.sha }}
-        restore-keys: |
-          ${{ runner.os }}-ssh-config-
+      # Пример использования кеширования для зависимостей
+      - name: Cache SSH config
+        uses: actions/cache@v2
+        with:
+          path: ~/.ssh
+          key: ${{ runner.os }}-ssh-config-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-ssh-config-
 
-    - name: Setup SOCKS5 Proxy connection
-      env:
-        K3S_SSH_PK: ${{ secrets.K3S_SSH_PK }}
-        SSH_CONFIG: ${{ secrets.SSH_CONFIG }}
-        K3S_IP: ${{ secrets.K3S_IP }}
-        K3S_USER: ${{ secrets.K3S_USER }}
-      run: |
-        # Создаем директорию для SSH конфигурации
-        mkdir -p ~/.ssh
-        
-        # Запускаем SSH-агент
-        eval "$(ssh-agent -s)"
-        
-        # Устанавливаем правильные права доступа для приватного ключа
-        echo "$K3S_SSH_PK" | tr -d '\r' > ~/.ssh/bastion_key
-        chmod 600 ~/.ssh/bastion_key
+      - name: Setup SSH connection and SOCKS5 Proxy
+        env:
+          K3S_SSH_PK: ${{ secrets.K3S_SSH_PK }}
+          SSH_CONFIG: ${{ secrets.SSH_CONFIG }}
+          K3S_IP: ${{ secrets.K3S_IP }}
+          K3S_USER: ${{ secrets.K3S_USER }}
+        run: |
+          # Создаем директорию для SSH конфигурации
+          mkdir -p ~/.ssh
+          
+          # Запускаем SSH-агент
+          eval "$(ssh-agent -s)"
+          
+          # Устанавливаем правильные права доступа для приватного ключа
+          echo "$K3S_SSH_PK" | tr -d '\r' > ~/.ssh/bastion_key
+          chmod 600 ~/.ssh/bastion_key
 
-        # Добавляем ключ в агент
-        ssh-add ~/.ssh/bastion_key
-        
-        # Создаем SSH конфигурацию из секрета
-        echo "$SSH_CONFIG" > ~/.ssh/config
-        chmod 600 ~/.ssh/config
+          # Добавляем ключ в агент
+          ssh-add ~/.ssh/bastion_key
+          
+          # Создаем SSH конфигурацию из секрета
+          echo "$SSH_CONFIG" > ~/.ssh/config
+          chmod 600 ~/.ssh/config
 
-        # Выводим переменные для проверки
-        echo "lalal"
-        echo "K3S_IP: $K3S_IP"
-        echo "K3S_USER: $K3S_USER"
+          # Настройка туннеля для доступа к k3s API server
+          ssh -L 6443:127.0.0.1:6443 -N -f $K3S_USER@$K3S_IP
 
-        # Настройка SOCKS5 прокси через SSH
-        echo "Starting SSH SOCKS5 Proxy..."
-        ssh -v -D 1080 -N -q -o StrictHostKeyChecking=no $K3S_USER@$K3S_IP &
+      # Добавление репозитория Bitnami и обновление репозиториев Helm
+      - name: Add Bitnami Helm repository
+        run: |
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+          helm repo update
 
-        # Проверяем, что прокси работает
-        sleep 5
-        curl --proxy socks5h://localhost:1080 http://example.com
+      # Проверка доступных версий MariaDB в репозитории Bitnami
+      - name: Check available MariaDB versions
+        run: |
+          helm search repo bitnami/mariadb --versions
 
-        # Завершаем прокси-подключение
-        kill %1
+      # Обновление зависимостей Helm
+      - name: Update Helm dependencies
+        run: |
+          helm dependency update helm-charts/wordpress
 
-    # - name: Get cloud-init logs
-    #   run: |
-    #     # Подключаемся к серверу и получаем лог cloud-init с правами sudo
-    #     echo "Fetching cloud-init log..."
-    #     ssh -o StrictHostKeyChecking=no -i ~/.ssh/bastion_key ec2-user@13.51.106.73 "sudo cat /var/log/cloud-init-output.log"
+      - name: Deploy WordPress
+        env:
+          KUBECONFIG: /tmp/k3s.yml
+        run: |
+          # Записываем KUBECONFIG в файл и устанавливаем права
+          echo "${{ vars.K3S_CONFIG }}" > $KUBECONFIG
+          chmod 600 "$KUBECONFIG"
+
+          # Проверка доступа к Kubernetes
+          echo "Checking kubectl access..."
+          kubectl version --client
+          kubectl cluster-info
+          kubectl get nodes
+
+          # Деплой WordPress с помощью Helm 1
+          kubectl get namespace wordpress || kubectl create namespace wordpress        
+          helm upgrade --install wordpress -n wordpress helm-charts/wordpress

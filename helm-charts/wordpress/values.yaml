@@ -1,0 +1,9 @@
+wordpressUsername: admin
+wordpressPassword: password
+wordpressEmail: admin@example.com
+mariadb:
+  auth:
+    rootPassword: mariadb-root-password
+    username: wordpress
+    password: wordpress-db-password
+    database: wordpress
