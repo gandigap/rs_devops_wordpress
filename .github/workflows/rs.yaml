@@ -68,11 +68,6 @@ jobs:
           helm repo add bitnami https://charts.bitnami.com/bitnami
           helm repo update
 
-      # Проверка доступных версий MariaDB в репозитории Bitnami (опционально)
-      - name: Check available MariaDB versions
-        run: |
-          helm search repo bitnami/mariadb --versions
-
       # Обновление зависимостей Helm (если нужны зависимости)
       - name: Update Helm dependencies
         run: |

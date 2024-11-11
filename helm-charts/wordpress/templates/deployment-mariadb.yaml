@@ -1,4 +1,3 @@
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -17,8 +16,7 @@ spec:
       containers:
         - name: mariadb
           image: "{{ .Values.mariadb.image.repository }}:{{ .Values.mariadb.image.tag }}"
-          imagePullPolicy:
-            "{ .Values.mariadb.image.pullPolicy }": null
+          imagePullPolicy: {{ .Values.mariadb.image.pullPolicy }}
           env:
             - name: MYSQL_DATABASE
               value: "{{ .Values.mariadb.db.name }}"

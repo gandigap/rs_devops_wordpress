@@ -1,26 +1,23 @@
-# Параметры WordPress
-wordpressUsername: admin
-wordpressPassword: password
-wordpressEmail: admin@example.com
-
 wordpress:
-  image:
-    repository: "bitnami/wordpress"
-    tag: "latest"
   replicaCount: 1
+  image:
+    repository: wordpress
+    tag: latest
+    pullPolicy: IfNotPresent
   service:
-    type: ClusterIP  # Используйте нужный тип, например, NodePort, если требуется внешний доступ
-    port: 80
+    type: NodePort
+    port: 32001
 
-# Параметры MariaDB
 mariadb:
   image:
-    repository: "bitnami/mariadb"
-    tag: "latest"
+    repository: mariadb
+    tag: latest
     pullPolicy: IfNotPresent
+  service:
+    type: NodePort
+    port: 8080
   db:
     name: wordpress
-    user: wordpress
-    password: wordpress-db-password
-    rootPassword: mariadb-root-password
-  replicaCount: 1
+    user: wpuser
+    password: wppassword
+    rootPassword: rootpassword
