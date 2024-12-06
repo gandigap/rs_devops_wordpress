@@ -1,0 +1,26 @@
+grafana:
+  replicaCount: 1
+  image:
+    repository: grafana/grafana
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: LoadBalancer
+    port: 3000
+  adminPassword: "admin"
+
+  persistence:
+    enabled: true
+    size: 2Gi
+    storageClassName: local-path
+
+  ingress:
+    enabled: false
+    path: /
+    hosts:
+      - grafana.local
+    annotations: {}
+
+  dashboards:
+    default:
+      enabled: true
