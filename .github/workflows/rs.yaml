@@ -59,12 +59,15 @@ jobs:
       - name: Create Kubernetes Secret for Admin Password
         env:
           ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+          KUBECONFIG: /tmp/k3s.yml  # Убедитесь, что здесь правильно передаете KUBECONFIG
         run: |
+          echo "${{ vars.K3S_CONFIG }}" > $KUBECONFIG
+          chmod 600 "$KUBECONFIG"
           kubectl create secret generic grafana-admin-password --from-literal=admin-password=$ADMIN_PASSWORD -n grafana
 
       - name: Deploy Grafana
         env:
-          KUBECONFIG: /tmp/k3s.yml
+          KUBECONFIG: /tmp/k3s.yml  # Убедитесь, что здесь тоже передается правильный KUBECONFIG
         run: |
           echo "${{ vars.K3S_CONFIG }}" > $KUBECONFIG
           chmod 600 "$KUBECONFIG"
