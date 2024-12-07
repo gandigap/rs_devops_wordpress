@@ -56,6 +56,12 @@ jobs:
         run: |
           helm dependency update ./helm-charts/grafana
 
+      - name: Create Kubernetes Secret for Admin Password
+        env:
+          ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+        run: |
+          kubectl create secret generic grafana-admin-password --from-literal=admin-password=$ADMIN_PASSWORD -n grafana
+
       - name: Deploy Grafana
         env:
           KUBECONFIG: /tmp/k3s.yml
