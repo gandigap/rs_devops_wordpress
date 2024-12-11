@@ -1,0 +1,82 @@
+name: SSH Connection Example
+
+on:
+  push:
+    branches:
+      - task-8
+
+jobs:
+  deploy-grafana:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Clear SSH config cache
+        run: |
+          echo "Clearing SSH config cache..."
+          rm -rf ~/.ssh/*
+
+      - name: Cache SSH config
+        uses: actions/cache@v2
+        with:
+          path: ~/.ssh
+          key: ${{ runner.os }}-ssh-config-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-ssh-config-
+
+      - name: Setup SSH connection and SOCKS5 Proxy
+        env:
+          K3S_SSH_PK: ${{ secrets.K3S_SSH_PK }}
+          SSH_CONFIG: ${{ secrets.SSH_CONFIG }}
+          K3S_IP: ${{ secrets.K3S_IP }}
+          K3S_USER: ${{ secrets.K3S_USER }}
+        run: |
+          mkdir -p ~/.ssh
+          eval "$(ssh-agent -s)"
+          echo "$K3S_SSH_PK" | tr -d '\r' > ~/.ssh/bastion_key
+          chmod 600 ~/.ssh/bastion_key
+          ssh-add ~/.ssh/bastion_key
+          echo "$SSH_CONFIG" > ~/.ssh/config
+          chmod 600 ~/.ssh/config
+          ssh-keyscan -H $K3S_IP >> ~/.ssh/known_hosts
+          ssh -L 6443:127.0.0.1:6443 -N -f $K3S_USER@$K3S_IP -o StrictHostKeyChecking=no
+
+      - name: Install Helm
+        run: |
+          curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
+
+      - name: Add Bitnami Helm repository
+        run: |
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+          helm repo update
+
+      - name: Update Helm dependencies
+        run: |
+          helm dependency update ./helm-charts/grafana
+
+      - name: Create Kubernetes Secret for Admin Password
+        env:
+          ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+          KUBECONFIG: /tmp/k3s.yml
+        run: |
+          echo "${{ vars.K3S_CONFIG }}" > $KUBECONFIG
+          chmod 600 "$KUBECONFIG"
+          # Создание пространства имён, если оно не существует
+          kubectl get namespace grafana || kubectl create namespace grafana
+          # Создание секрета
+          kubectl create secret generic grafana-admin-password --from-literal=admin-password=$ADMIN_PASSWORD -n grafana
+
+      - name: Deploy Grafana
+        env:
+          KUBECONFIG: /tmp/k3s.yml
+        run: |
+          echo "${{ vars.K3S_CONFIG }}" > $KUBECONFIG
+          chmod 600 "$KUBECONFIG"
+          echo "Checking kubectl access..."
+          kubectl version --client
+          kubectl cluster-info
+          kubectl get nodes
+          kubectl get namespace grafana || kubectl create namespace grafana
+          helm upgrade --install grafana ./helm-charts/grafana -n grafana -f ./helm-charts/grafana/values.yaml
