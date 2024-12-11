@@ -67,4 +67,11 @@ jobs:
           kubectl cluster-info
           kubectl get nodes
           kubectl get namespace grafana || kubectl create namespace grafana
-          helm upgrade --install grafana ./helm-charts/grafana -n grafana -f ./helm-charts/grafana/values.yaml
+          helm upgrade --install grafana ./helm-charts/grafana -n grafana -f ./helm-charts/grafana/values.yaml \
+            --set smtp.enabled=true \
+            --set smtp.host="email-smtp.eu-north-1.amazonaws.com:587" \
+            --set smtp.user="${{ secrets.SMTP_USER }}" \
+            --set smtp.password="${{ secrets.SMTP_PASSWORD }}" \
+            --set smtp.from_address="igor.simatic@gmail.com" \
+            --set smtp.from_name="Grafana" \
+            --set smtp.skip_verify=true
