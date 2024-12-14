@@ -1,60 +1,32 @@
-grafana:
-  replicaCount: 1
-  image:
-    repository: grafana/grafana
-    tag: latest
-    pullPolicy: IfNotPresent
-  service:
-    type: LoadBalancer
-    port: 3000
-  adminPassword: "admin"
+replicaCount: 1
 
-  persistence:
+image:
+  repository: grafana/grafana
+  tag: latest
+  pullPolicy: IfNotPresent
+
+persistence:
+  enabled: true
+  size: 2Gi
+  storageClassName: local-path
+
+
+ingress:
+  enabled: false
+  path: /
+  hosts:
+    - grafana.local
+  annotations: {}
+
+dashboards:
+  default:
     enabled: true
-    size: 2Gi
-    storageClassName: local-path
 
-  ingress:
-    enabled: false
-    path: /
-    hosts:
-      - grafana.local
-    annotations: {}
-
-  dashboards:
-    default:
-      enabled: true
-
-  grafana:
-  replicaCount: 1
-  image:
-    repository: grafana/grafana
-    tag: latest
-    pullPolicy: IfNotPresent
-  service:
-    type: LoadBalancer
-    port: 3000
-  adminPassword: "admin"
-
-  persistence:
-    enabled: true
-    size: 2Gi
-    storageClassName: local-path
-
-  ingress:
-    enabled: false
-    path: /
-    hosts:
-      - grafana.local
-    annotations: {}
-
-  dashboards:
-    default:
-      enabled: true
-
-  # Добавление securityContext для работы с root
-  securityContext:
-    runAsUser: 0      # UID для пользователя root
-    runAsGroup: 0     # GID для группы root
-    fsGroup: 0        # GID для файловой системы
-    privileged: true
+contactPoints:
+  email-alert:
+    email:
+      to: 
+        - "X-men555@list.ru" 
+      from: "igor.simatic@gmail.com" 
+      smarthost: "email-smtp.eu-north-1.amazonaws.com:587" 
+      skip_verify: true 
