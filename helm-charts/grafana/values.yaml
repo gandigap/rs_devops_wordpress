@@ -22,11 +22,16 @@ dashboards:
   default:
     enabled: true
 
-contactPoints:
-  email-alert:
-    email:
-      to: 
-        - "X-men555@list.ru" 
-      from: "igor.simatic@gmail.com" 
-      smarthost: "email-smtp.eu-north-1.amazonaws.com:587" 
-      skip_verify: true 
+alerting:
+  enabled: true
+  contactPoints:
+    devops:
+      receivers:
+        - name: "Devops"
+          emailConfigs:
+            - to: "igor.simatic@gmail.com"
+              from: "grafana@example.com"
+              smarthost: "email-smtp.eu-north-1.amazonaws.com:587"
+              auth_username: "${SMTP_USER}"
+              auth_password: "${SMTP_PASSWORD}"
+              starttlsPolicy: "Require"
