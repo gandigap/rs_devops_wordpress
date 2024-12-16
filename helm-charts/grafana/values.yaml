@@ -1,32 +1,37 @@
-grafana:
-  adminPassword: 
-    secretKeyRef:
-      name: grafana-admin-password
-      key: admin-password
+replicaCount: 1
 
-  replicaCount: 1
+image:
+  repository: grafana/grafana
+  tag: latest
+  pullPolicy: IfNotPresent
 
-  image:
-    repository: grafana/grafana
-    tag: latest
-    pullPolicy: IfNotPresent
+persistence:
+  enabled: true
+  size: 2Gi
+  storageClassName: local-path
 
-  service:
-    type: LoadBalancer
-    port: 3000
 
-  persistence:
+ingress:
+  enabled: false
+  path: /
+  hosts:
+    - grafana.local
+  annotations: {}
+
+dashboards:
+  default:
     enabled: true
-    size: 2Gi
-    storageClassName: local-path
 
-  ingress:
-    enabled: false
-    path: /
-    hosts:
-      - grafana.local
-    annotations: {}
-
-  dashboards:
-    default:
-      enabled: true
+alerting:
+  enabled: true
+  contactPoints:
+    devops:
+      receivers:
+        - name: "Devops"
+          emailConfigs:
+            - to: "igor.simatic@gmail.com"
+              from: "grafana@example.com"
+              smarthost: "email-smtp.eu-north-1.amazonaws.com:587"
+              auth_username: "${SMTP_USER}"
+              auth_password: "${SMTP_PASSWORD}"
+              starttlsPolicy: "Require"

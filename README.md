@@ -20,4 +20,7 @@ secret K3S_IP=123.123.123.123
 secret K3S_SSH_PK=public ssh key
 secret K3S_USER=ec2-user
 var SSH_CONFIG=from k3s.yaml
+secret K3S_USER=ec2-user
+secret SMTP_PASSWORD=password
+secret SMTP_USER=user
 ```
